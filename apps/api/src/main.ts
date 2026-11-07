@@ -22,7 +22,7 @@ async function bootstrap(): Promise<void> {
       [
         'API del sistema de punto de venta (POS).',
         '',
-        '**Estado: Fase 3 — catálogo de categorías y productos.**',
+        '**Estado: Fase 6 — inventario y stock.**',
         '',
         'La sesión se mantiene con **cookies `httpOnly`**:',
         '',
@@ -40,6 +40,7 @@ async function bootstrap(): Promise<void> {
         '  `POST /auth/refresh`.',
         '- `/users` exige rol `ADMIN`.',
         '- `/categories` y `/products` exigen rol `ADMIN`.',
+        '- `/inventory` exige rol `ADMIN`.',
         '- `POST /auth/login` acepta 5 intentos por minuto e IP (luego `429`).',
         '- Las mutaciones con cabecera `Origin` distinta de `WEB_ORIGIN` responden',
         '  `403`. Si vas a probar aquí, en `http://localhost:3001`, agrega ese',
@@ -49,7 +50,7 @@ async function bootstrap(): Promise<void> {
         `Todas las rutas usan el prefijo global \`/${GLOBAL_PREFIX}\`.`,
       ].join('\n'),
     )
-    .setVersion('0.3.0')
+    .setVersion('0.6.0')
     .addServer('/', 'Servidor actual')
     .addCookieAuth(
       'access_token',
@@ -83,6 +84,10 @@ async function bootstrap(): Promise<void> {
     .addTag(
       'Products',
       'Catálogo de productos, precios, stock mínimo e historial de cambios (solo rol `ADMIN`).',
+    )
+    .addTag(
+      'Inventory',
+      'Movimientos de stock, costo promedio ponderado, stock bajo y valorización (solo rol ADMIN).',
     )
     .addTag(
       'Health',
