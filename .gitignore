@@ -1,0 +1,32 @@
+# Dependencias
+node_modules/
+.pnpm-store/
+
+# Builds
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# Prisma (cliente generado)
+apps/api/src/generated/
+
+# Tests
+coverage/
+
+# Entorno local
+.env
+.env.local
+.env.*.local
+
+# Editores / sistema
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*

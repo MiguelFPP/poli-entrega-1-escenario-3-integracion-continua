@@ -1,0 +1,113 @@
+@import 'tailwindcss';
+
+/*
+ * Tokens Material You (M3) derivados del azul institucional #1A237E.
+ * El modo oscuro se activa con prefers-color-scheme.
+ */
+:root {
+  color-scheme: light dark;
+
+  --md-primary: #1a237e;
+  --md-on-primary: #ffffff;
+  --md-primary-container: #dee0ff;
+  --md-on-primary-container: #00105c;
+  --md-secondary: #5b5d72;
+  --md-on-secondary: #ffffff;
+  --md-secondary-container: #e0e0f9;
+  --md-on-secondary-container: #181a2c;
+  --md-background: #fbf8ff;
+  --md-on-background: #1b1b21;
+  --md-surface: #fbf8ff;
+  --md-surface-dim: #dbd9e0;
+  --md-surface-variant: #e4e1ec;
+  --md-on-surface: #1b1b21;
+  --md-on-surface-variant: #46464f;
+  --md-outline: #777680;
+  --md-outline-variant: #c7c5d0;
+  --md-error: #ba1a1a;
+  --md-on-error: #ffffff;
+  --md-surface-container-lowest: #ffffff;
+  --md-surface-container-low: #f5f2fa;
+  --md-surface-container: #efedf5;
+  --md-surface-container-high: #e9e7ef;
+  --md-surface-container-highest: #e4e1ec;
+  --md-inverse-surface: #303036;
+  --md-inverse-on-surface: #f2eff7;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --md-primary: #bcc2ff;
+    --md-on-primary: #0d1a6b;
+    --md-primary-container: #2a3a8f;
+    --md-on-primary-container: #dee0ff;
+    --md-secondary: #c4c5dd;
+    --md-on-secondary: #2d2f42;
+    --md-secondary-container: #434559;
+    --md-on-secondary-container: #e0e0f9;
+    --md-background: #131318;
+    --md-on-background: #e4e1e9;
+    --md-surface: #131318;
+    --md-surface-dim: #131318;
+    --md-surface-variant: #46464f;
+    --md-on-surface: #e4e1e9;
+    --md-on-surface-variant: #c7c5d0;
+    --md-outline: #918f9a;
+    --md-outline-variant: #46464f;
+    --md-error: #ffb4ab;
+    --md-on-error: #690005;
+    --md-surface-container-lowest: #0e0e13;
+    --md-surface-container-low: #1b1b21;
+    --md-surface-container: #1f1f25;
+    --md-surface-container-high: #2a2930;
+    --md-surface-container-highest: #35343b;
+    --md-inverse-surface: #e4e1e9;
+    --md-inverse-on-surface: #303036;
+  }
+}
+
+@theme inline {
+  --font-sans: 'Roboto Flex Variable', 'Roboto Flex', system-ui, -apple-system,
+    'Segoe UI', sans-serif;
+  --color-primary: var(--md-primary);
+  --color-on-primary: var(--md-on-primary);
+  --color-primary-container: var(--md-primary-container);
+  --color-on-primary-container: var(--md-on-primary-container);
+  --color-secondary: var(--md-secondary);
+  --color-on-secondary: var(--md-on-secondary);
+  --color-secondary-container: var(--md-secondary-container);
+  --color-on-secondary-container: var(--md-on-secondary-container);
+  --color-background: var(--md-background);
+  --color-on-background: var(--md-on-background);
+  --color-surface: var(--md-surface);
+  --color-surface-dim: var(--md-surface-dim);
+  --color-surface-variant: var(--md-surface-variant);
+  --color-on-surface: var(--md-on-surface);
+  --color-on-surface-variant: var(--md-on-surface-variant);
+  --color-outline: var(--md-outline);
+  --color-outline-variant: var(--md-outline-variant);
+  --color-error: var(--md-error);
+  --color-on-error: var(--md-on-error);
+  --color-surface-container-lowest: var(--md-surface-container-lowest);
+  --color-surface-container-low: var(--md-surface-container-low);
+  --color-surface-container: var(--md-surface-container);
+  --color-surface-container-high: var(--md-surface-container-high);
+  --color-surface-container-highest: var(--md-surface-container-highest);
+  --color-inverse-surface: var(--md-inverse-surface);
+  --color-inverse-on-surface: var(--md-inverse-on-surface);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--md-background);
+  color: var(--md-on-background);
+  font-family:
+    'Roboto Flex Variable', 'Roboto Flex', system-ui, -apple-system, 'Segoe UI',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}

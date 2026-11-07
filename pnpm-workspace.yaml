@@ -1,0 +1,27 @@
+packages:
+  - apps/*
+
+# Layout plano: las imágenes de Docker copian node_modules tal cual.
+nodeLinker: hoisted
+autoInstallPeers: true
+strictPeerDependencies: false
+saveExact: true
+
+# TypeScript 5.9.3 en todo el workspace (el CLI de Nest declara ^6 como interna).
+overrides:
+  typescript: 5.9.3
+
+# Sin ventana de gracia: las versiones están fijadas explícitamente.
+minimumReleaseAge: 0
+
+# Dependencias que necesitan ejecutar scripts de instalación.
+allowBuilds:
+  '@parcel/watcher': true
+  '@prisma/client': true
+  '@prisma/engines': true
+  '@scarf/scarf': false
+  '@tailwindcss/oxide': true
+  esbuild: true
+  prisma: true
+  sharp: true
+  unrs-resolver: true
