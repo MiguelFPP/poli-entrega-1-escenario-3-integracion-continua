@@ -22,7 +22,7 @@ async function bootstrap(): Promise<void> {
       [
         'API del sistema de punto de venta (POS).',
         '',
-        '**Estado: Fase 10 — KPIs y reportes.**',
+        '**Estado: v1.0.0 — cierre técnico.**',
         '',
         'La sesión se mantiene con **cookies `httpOnly`**:',
         '',
@@ -52,7 +52,7 @@ async function bootstrap(): Promise<void> {
         `Todas las rutas usan el prefijo global \`/${GLOBAL_PREFIX}\`.`,
       ].join('\n'),
     )
-    .setVersion('0.10.0')
+    .setVersion('1.0.0')
     .addServer('/', 'Servidor actual')
     .addCookieAuth(
       'access_token',

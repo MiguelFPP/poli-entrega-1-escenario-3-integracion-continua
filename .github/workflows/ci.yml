@@ -1,0 +1,152 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_OPTIONS: --experimental-vm-modules
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.16.1
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Generate Prisma client
+        run: pnpm --filter @pos/api prisma:generate
+      - name: ESLint
+        run: pnpm lint
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.16.1
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Generate Prisma client
+        run: pnpm --filter @pos/api prisma:generate
+      - name: TypeScript
+        run: pnpm typecheck
+
+  test-unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.16.1
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Generate Prisma client
+        run: pnpm --filter @pos/api prisma:generate
+      - name: Run tests
+        run: pnpm test
+
+  test-e2e:
+    name: E2E tests
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://pos:pos@localhost:5432/pos_test
+      JWT_ACCESS_SECRET: test-access-secret-0000000000000000000000
+      JWT_REFRESH_SECRET: test-refresh-secret-000000000000000000000
+      WEB_ORIGIN: http://localhost:3000
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: pos
+          POSTGRES_PASSWORD: pos
+          POSTGRES_DB: pos
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pos -d pos"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.16.1
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Generate Prisma client
+        run: pnpm --filter @pos/api prisma:generate
+      - name: Create pos_test database
+        run: psql "postgresql://pos:pos@localhost:5432/pos" -c 'CREATE DATABASE pos_test OWNER pos;'
+      - name: Apply migrations (pos)
+        env:
+          DATABASE_URL: postgresql://pos:pos@localhost:5432/pos
+        run: pnpm --filter @pos/api migrate:deploy
+      - name: Apply migrations (pos_test)
+        run: pnpm --filter @pos/api migrate:test
+      - name: Run e2e tests
+        run: pnpm --filter @pos/api test:e2e
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.16.1
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Generate Prisma client
+        run: pnpm --filter @pos/api prisma:generate
+      - name: Build API
+        run: pnpm --filter @pos/api build
+      - name: Build web
+        run: pnpm --filter @pos/web build

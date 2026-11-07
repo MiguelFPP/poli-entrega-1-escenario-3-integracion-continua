@@ -111,6 +111,7 @@ model Product {
   @@index([categoryId])
   @@index([name])
   @@index([active])
+  @@index([active, deletedAt])
   @@map("products")
 }
 
@@ -149,6 +150,7 @@ model StockMovement {
 
   @@index([productId, createdAt])
   @@index([saleId])
+  @@index([type, createdAt])
   @@map("stock_movements")
 }
 
@@ -177,6 +179,7 @@ model Sale {
   @@index([createdAt])
   @@index([status])
   @@index([userId])
+  @@index([status, createdAt])
   @@map("sales")
 }
 

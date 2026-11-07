@@ -27,4 +27,17 @@ export class ErrorResponseDto {
     ],
   })
   message!: string | string[];
+
+  @ApiProperty({
+    description: 'Marca temporal ISO 8601 en la que se generó el error.',
+    format: 'date-time',
+    example: '2026-01-15T12:00:00.000Z',
+  })
+  timestamp!: string;
+
+  @ApiProperty({
+    description: 'Ruta de la petición que originó el error.',
+    example: '/api/v1/products',
+  })
+  path!: string;
 }
