@@ -3,10 +3,10 @@ TEST_DB_URL := postgresql://pos:pos@db:5432/pos_test
 FILE ?=
 
 .DEFAULT_GOAL := help
-.PHONY: help up down logs ps build migrate seed migrate-deploy api-test api-e2e web-test lint-api lint-web typecheck-api typecheck-web db-shell psql
+.PHONY: help up down logs ps build migrate migrate-test migrate-deploy seed seed-demo api-test api-e2e web-test lint-api lint-web typecheck-api typecheck-web db-shell psql
 
 help: ## Muestra los comandos disponibles
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
 up: ## Construye y levanta db, api y web
 	$(COMPOSE) up -d --build
@@ -24,18 +24,24 @@ build: ## Reconstruye las imágenes de api y web
 	$(COMPOSE) build
 
 migrate: ## Aplica migraciones de Prisma en la base pos
-	$(COMPOSE) run --rm api pnpm migrate
+	$(COMPOSE) run --rm -v "$(CURDIR)/apps/api/prisma:/app/apps/api/prisma" api pnpm migrate
 
 migrate-deploy: ## Aplica migraciones sin prompts (CI/producción)
 	$(COMPOSE) run --rm api pnpm migrate:deploy
 
-seed: ## Ejecuta el seed de la base pos
+migrate-test: ## Aplica migraciones sobre pos_test (previo a los e2e)
+	$(COMPOSE) run --rm -v "$(CURDIR)/apps/api/prisma:/app/apps/api/prisma" -e DATABASE_URL=$(TEST_DB_URL) api pnpm migrate:test
+
+seed: ## Ejecuta el seed base de la base pos
 	$(COMPOSE) run --rm api pnpm seed
+
+seed-demo: ## Genera datos de demo en la base pos (borra datos previos)
+	$(COMPOSE) run --rm api pnpm seed:demo
 
 api-test: ## Pruebas unitarias de la API (FILE=archivo opcional)
 	$(COMPOSE) run --rm api pnpm test -- $(FILE)
 
-api-e2e: ## Pruebas e2e de la API contra pos_test (FILE=archivo opcional)
+api-e2e: migrate-test ## Pruebas e2e de la API contra pos_test (FILE=archivo opcional)
 	$(COMPOSE) run --rm -e DATABASE_URL=$(TEST_DB_URL) api pnpm test:e2e -- $(FILE)
 
 web-test: ## Pruebas de la web (FILE=archivo opcional)
