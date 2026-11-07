@@ -1,6 +1,6 @@
 # POS — Sistema de punto de venta
 
-Monorepo del sistema POS. **Estado actual: Fase 2 (autenticación y usuarios)**.
+Monorepo del sistema POS. **Estado actual: Fase 3 (catálogo de categorías y productos)**.
 La Fase 0 dejó la infraestructura (contenedores de web, API y base de datos,
 endpoint de salud y Swagger) y la Fase 1 el modelo de datos completo de Prisma,
 las migraciones, las _factories_ con Faker y los seeds base y demo.
@@ -9,6 +9,12 @@ La Fase 2 agrega autenticación con JWT de acceso + refresh token rotativo en
 cookies `httpOnly`, guards globales (auth, roles, `Origin` y rate limit) y el
 CRUD de usuarios restringido a `ADMIN`, todo documentado en Swagger. La pantalla
 de login llega en la Fase 7.
+
+La Fase 3 agrega el catálogo: CRUD de categorías y productos con precios en COP,
+stock mínimo, activo/inactivo, borrado lógico, filtros, paginación, orden,
+historial de cambios de precio y documentación Swagger detallada. El stock real
+sigue siendo de solo lectura: se gestionará con movimientos de inventario en la
+Fase 4, y la UI del catálogo llega en la Fase 8.
 
 ## Stack
 
@@ -52,7 +58,9 @@ No se necesita Node.js ni pnpm en el host: todo se ejecuta dentro de contenedore
 │   │   │   ├── health/       # GET /api/v1/health (público)
 │   │   │   ├── modules/
 │   │   │   │   ├── auth/     # login, refresh, logout, me y tokens
-│   │   │   │   └── users/    # CRUD de usuarios (solo ADMIN)
+│   │   │   │   ├── users/    # CRUD de usuarios (solo ADMIN)
+│   │   │   │   ├── categories/ # CRUD de categorías (solo ADMIN)
+│   │   │   │   └── products/ # catálogo, precios e historial (solo ADMIN)
 │   │   │   └── prisma/       # PrismaService con adaptador pg
 │   │   └── test/       # unitarios y e2e con Supertest
 │   └── web/            # Next.js 16 (App Router) + Tailwind 4
@@ -254,6 +262,108 @@ curl -b cookies.txt -X PATCH http://localhost:3001/api/v1/users/<uuid>/deactivat
 `docker-compose.yml` y `.env.example` traen valores **solo de desarrollo**
 (≥32 caracteres). En producción genera secretos propios, por ejemplo con
 `openssl rand -base64 48`.
+
+## Catálogo (Fase 3)
+
+### Endpoints
+
+| Método | Ruta                                 | Acceso | Descripción                                                              |
+| ------ | ------------------------------------ | ------ | ------------------------------------------------------------------------ |
+| GET    | `/api/v1/categories`                 | ADMIN  | Lista ordenada por nombre (`active`, `search`); incluye `productCount`   |
+| POST   | `/api/v1/categories`                 | ADMIN  | Crea categoría (nombre único, descripción opcional)                      |
+| PATCH  | `/api/v1/categories/:id`             | ADMIN  | Actualiza `name`, `description` y/o `active`                             |
+| DELETE | `/api/v1/categories/:id`             | ADMIN  | Borrado lógico (`active: false`); `409` si tiene productos activos       |
+| GET    | `/api/v1/products`                   | ADMIN  | Listado paginado (`page`, `pageSize`, `search`, `categoryId`, `active`, `lowStock`, `sort`, `order`) |
+| POST   | `/api/v1/products`                   | ADMIN  | Crea producto con stock `0` y precios iniciales en el historial          |
+| GET    | `/api/v1/products/:id`               | ADMIN  | Detalle del producto con su categoría                                    |
+| PATCH  | `/api/v1/products/:id`               | ADMIN  | Actualiza catálogo/precios; registra `PriceHistory` si cambia un precio  |
+| DELETE | `/api/v1/products/:id`               | ADMIN  | Borrado lógico (`active: false`, `deletedAt`); idempotente               |
+| GET    | `/api/v1/products/:id/price-history` | ADMIN  | Historial de precios paginado (más reciente primero)                     |
+
+Todas las rutas exigen sesión y rol `ADMIN` (`401` sin sesión, `403` con otro
+rol). Los identificadores inválidos responden `400` (`ParseUUIDPipe`).
+
+### Reglas de negocio
+
+**Categorías**
+
+- El nombre se recorta y es único **sin distinguir mayúsculas**: si existe
+  `Bebidas`, crear `bebidas` responde `409`. Además del `UNIQUE` de la base se
+  comprueba con `mode: 'insensitive'`.
+- `DELETE` es borrado lógico (`active: false`) e idempotente. Si la categoría
+  tiene productos activos responde `409`.
+- `productCount` cuenta los productos **no eliminados** de la categoría.
+
+**Productos**
+
+- `sku` es obligatorio y único; se recorta y se guarda en mayúsculas. `barcode`
+  es opcional y único. Duplicados responden `409`.
+- `categoryId` debe existir y estar **activa**; si no, `400`.
+- `costPrice`, `salePrice` y `minStock` deben ser `>= 0` (dinero en COP con
+  hasta dos decimales).
+- El **stock inicial siempre es `0`**. Enviar `stock` al crear o actualizar
+  responde `400`: el inventario se gestiona con movimientos (Fase 4).
+- `DELETE` marca `active: false` y `deletedAt: now()`; repetirlo sigue
+  respondiendo `204`. El producto deja de aparecer en el listado y su detalle
+  responde `404`.
+- Al crear un producto se registran dos entradas en `PriceHistory` (`COST` y
+  `SALE`, `oldValue: 0`) con el usuario que lo creó. Cada cambio de
+  `costPrice`/`salePrice` añade otra entrada con `oldValue`, `newValue` y
+  `changedBy`, en la misma transacción que la actualización.
+- `lowStock` se calcula como `stock <= minStock` y también se puede usar como
+  filtro (`lowStock=true`).
+- El listado excluye los productos eliminados lógicamente y ordena por
+  `createdAt desc` por defecto (`sort`: `name`, `salePrice`, `stock`,
+  `createdAt`; `order`: `asc`/`desc`).
+
+### Ejemplos con curl
+
+```bash
+# 1. Login y cookie jar
+curl -i -c cookies.txt -H 'Content-Type: application/json' \
+  -d '{"email":"admin@pos.local","password":"Admin123!"}' \
+  http://localhost:3001/api/v1/auth/login
+
+# 2. Crear una categoría
+curl -b cookies.txt -H 'Content-Type: application/json' \
+  -d '{"name":"Bebidas","description":"Bebidas frías y calientes"}' \
+  http://localhost:3001/api/v1/categories
+
+# 3. Crear un producto (stock inicial 0, precios en COP)
+curl -b cookies.txt -H 'Content-Type: application/json' \
+  -d '{
+    "sku":"BEB-001",
+    "barcode":"7701000000011",
+    "name":"Agua Cristal 600 ml",
+    "categoryId":"<uuid-categoria>",
+    "costPrice":1200,
+    "salePrice":2000,
+    "minStock":24,
+    "unit":"botella",
+    "imageUrl":"https://cdn.pos.local/products/agua-cristal-600ml.png"
+  }' \
+  http://localhost:3001/api/v1/products
+
+# 4. Listar con filtros, orden y paginación
+curl -b cookies.txt \
+  'http://localhost:3001/api/v1/products?page=1&pageSize=20&categoryId=<uuid>&active=true&sort=name&order=asc'
+
+# 5. Cambiar el precio de venta (genera historial)
+curl -b cookies.txt -X PATCH -H 'Content-Type: application/json' \
+  -d '{"salePrice":2200}' \
+  http://localhost:3001/api/v1/products/<uuid-producto>
+
+# 6. Consultar el historial de precios
+curl -b cookies.txt \
+  'http://localhost:3001/api/v1/products/<uuid-producto>/price-history?page=1&pageSize=20'
+
+# 7. Borrar lógicamente un producto
+curl -i -b cookies.txt -X DELETE \
+  http://localhost:3001/api/v1/products/<uuid-producto>
+```
+
+Swagger (`http://localhost:3001/api/docs`) documenta cada endpoint con ejemplos
+reales, parámetros de filtro y todas las respuestas de error.
 
 ## Modelo de datos (Fase 1)
 
@@ -465,6 +575,47 @@ contraseña, desactivación, `404` y autodesactivación bloqueada.
 Cada archivo e2e limpia la base con `resetDatabase` y reinicia el rate limit,
 así que el `429` no vuelve flaky a los demás casos.
 
+## Pruebas de la fase 3
+
+```bash
+# 1. Imagen con el catálogo nuevo
+docker compose build api
+
+# 2. Base de datos arriba
+docker compose up -d db
+
+# 3. Unitarios de servicios (sin base de datos)
+make api-test FILE="src/modules/categories/categories.service.spec.ts src/modules/products/products.service.spec.ts"
+
+# 4. e2e del catálogo (aplican migraciones sobre pos_test)
+make api-e2e FILE="test/categories.e2e-spec.ts test/products.e2e-spec.ts test/price-history.e2e-spec.ts"
+
+# 5. Calidad
+make lint-api
+make typecheck-api
+
+# 6. Humo manual con curl (cookie jar)
+docker compose up -d api
+curl -i -c cookies.txt -H 'Content-Type: application/json' \
+  -d '{"email":"admin@pos.local","password":"Admin123!"}' \
+  http://localhost:3001/api/v1/auth/login
+curl -b cookies.txt -H 'Content-Type: application/json' \
+  -d '{"name":"Bebidas"}' http://localhost:3001/api/v1/categories
+curl -b cookies.txt 'http://localhost:3001/api/v1/products?sort=name&order=asc'
+```
+
+Los unitarios cubren: nombre de categoría duplicado, normalización con `trim`,
+borrado con productos activos, normalización de SKU, rechazo de `stock`,
+historial al cambiar precio, filtro `lowStock` y unicidad de SKU/barcode.
+
+Los e2e cubren: `401`/`403` en `/categories`; CRUD de categorías, orden por
+nombre, búsqueda, filtro por estado, duplicado `409`, borrado lógico y `409`
+cuando hay productos activos; en `/products`: `401`, creación, listado,
+filtros, paginación, orden, detalle con categoría, actualización, SKU/barcode
+duplicados `409`, `stock` `400`, categoría inactiva/inexistente `400`, borrado
+lógico idempotente y `lowStock`; y en el historial: precios iniciales `COST` y
+`SALE`, registros con `changedBy`, paginación y `404`.
+
 ## Credenciales
 
 El seed (`pnpm seed` y `pnpm seed:demo`) crea el administrador del MVP:
@@ -509,6 +660,19 @@ falla si faltan o son cortas.
 - **`enableImplicitConversion` y booleanos**: `class-transformer` convierte
   `'false'` a `true` al inferir `Boolean`, por eso `active` en el query de
   `/users` se valida como `'true' | 'false'` y se traduce en el servicio.
+- **Catálogo y stock**: `ProductsService` nunca escribe `stock` al crear o
+  actualizar; crear un producto fuerza `stock: 0` y cualquier payload con
+  `stock` responde `400`. El borrado lógico usa `active` + `deletedAt` y las
+  lecturas filtran `deletedAt: null`.
+- **Historial de precios**: la creación del producto y sus dos entradas
+  iniciales (`COST`/`SALE`) van en una transacción interactiva; los cambios de
+  precio se registran en la misma transacción que el `update` del producto.
+  `changedById` sale del usuario autenticado (`@CurrentUser`).
+- **Filtro `lowStock`**: se resuelve con una referencia de campo de Prisma
+  (`stock: { lte: prisma.product.fields.minStock }`), sin traer filas a memoria.
+- **Paginación compartida**: `PaginationMetaDto` vive en
+  `src/common/dto/pagination-meta.dto.ts`; `users` lo reexporta para conservar
+  su ruta histórica.
 - **Tailwind 4** define los tokens Material You con `@theme inline` sobre
   variables CSS, por lo que el modo oscuro funciona con `prefers-color-scheme`
   sin prefijos `dark:`.
