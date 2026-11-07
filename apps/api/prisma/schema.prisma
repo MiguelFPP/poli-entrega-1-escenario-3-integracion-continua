@@ -1,0 +1,9 @@
+// Fase 0: sin modelos. La Fase 1 agrega las entidades del dominio.
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}

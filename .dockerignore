@@ -1,0 +1,15 @@
+node_modules
+.pnpm-store
+.git
+.gitignore
+.next
+dist
+build
+out
+coverage
+*.log
+.env
+.env.*
+!.env.example
+apps/api/src/generated
+README.md
