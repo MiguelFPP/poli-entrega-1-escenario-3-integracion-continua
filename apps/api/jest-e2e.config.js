@@ -13,7 +13,16 @@ export default {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   setupFiles: ['<rootDir>/test/setup.ts'],
+  collectCoverageFrom: [
+    'src/**/*.ts',
+    '!src/generated/**',
+    '!src/main.ts',
+    '!src/app.module.ts',
+    '!src/app.setup.ts',
+    '!src/**/*.module.ts',
+  ],
+  coverageReporters: ['text', 'lcov'],
+  coverageDirectory: 'coverage/e2e',
   testTimeout: 30000,
   maxWorkers: 1,
-  coverageDirectory: 'coverage/e2e',
 };

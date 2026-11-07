@@ -14,7 +14,18 @@ export default {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   setupFiles: ['<rootDir>/test/setup.ts'],
-  collectCoverageFrom: ['src/**/*.ts', '!src/generated/**', '!src/main.ts'],
+  collectCoverageFrom: [
+    'src/**/*.ts',
+    '!src/generated/**',
+    '!src/main.ts',
+    '!src/app.module.ts',
+    '!src/app.setup.ts',
+    '!src/**/*.module.ts',
+  ],
   coverageDirectory: 'coverage/unit',
+  coverageReporters: ['text', 'lcov'],
+  coverageThreshold: {
+    global: { statements: 70, lines: 70, branches: 60 },
+  },
   clearMocks: true,
 };

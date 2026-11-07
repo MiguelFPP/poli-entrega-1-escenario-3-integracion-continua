@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter.js';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard.js';
 import { OriginGuard } from './common/guards/origin.guard.js';
 import { RateLimitGuard } from './common/guards/rate-limit.guard.js';
@@ -36,6 +37,7 @@ import { PrismaModule } from './prisma/prisma.module.js';
     HealthModule,
   ],
   providers: [
+    { provide: APP_FILTER, useClass: HttpExceptionFilter },
     // El orden importa: primero límite de peticiones, luego Origin, auth y roles.
     { provide: APP_GUARD, useClass: RateLimitGuard },
     { provide: APP_GUARD, useClass: OriginGuard },
