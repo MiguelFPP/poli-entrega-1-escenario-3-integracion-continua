@@ -9,6 +9,8 @@ export {
   CardTitle,
 } from './card';
 export type { CardProps, CardSectionProps, CardVariant } from './card';
+export { Checkbox } from './checkbox';
+export type { CheckboxProps } from './checkbox';
 export { Chip } from './chip';
 export type { ChipProps, ChipVariant } from './chip';
 export { Dialog } from './dialog';
@@ -38,5 +40,7 @@ export {
   TableRow,
 } from './table';
 export type { TableProps } from './table';
+export { TextArea } from './textarea';
+export type { TextAreaProps } from './textarea';
 export { TextField } from './text-field';
 export type { TextFieldProps } from './text-field';

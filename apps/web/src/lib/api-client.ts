@@ -36,6 +36,36 @@ export interface ApiFetchOptions extends Omit<RequestInit, 'body'> {
   readonly body?: BodyInit | null;
 }
 
+/**
+ * Mensaje legible de un error de la API. El `message` del payload puede ser
+ * un texto o la lista de errores del `ValidationPipe`.
+ */
+export function extractErrorMessage(error: unknown): string {
+  if (!(error instanceof ApiError)) {
+    return 'Ocurrió un error inesperado.';
+  }
+
+  const payload = error.payload;
+  if (typeof payload === 'object' && payload !== null) {
+    const message = (payload as { message?: unknown }).message;
+
+    if (typeof message === 'string' && message.length > 0) {
+      return message;
+    }
+
+    if (Array.isArray(message)) {
+      const text = message
+        .filter((item): item is string => typeof item === 'string')
+        .join('. ');
+      if (text.length > 0) {
+        return text;
+      }
+    }
+  }
+
+  return error.message;
+}
+
 /** Mensaje en español según el estado HTTP. */
 function messageFor(status: number): string {
   return STATUS_MESSAGES[status] ?? `La API respondió con el estado ${status}.`;
