@@ -2,7 +2,9 @@
 
 /*
  * Tokens Material You (M3) derivados del azul institucional #1A237E.
- * El modo oscuro se activa con prefers-color-scheme.
+ * La paleta oscura se declara dos veces a propósito: una para el sistema
+ * (`prefers-color-scheme`) y otra para el tema explícito (`data-theme`),
+ * porque el tema elegido debe ganar siempre sobre la preferencia del SO.
  */
 :root {
   color-scheme: light dark;
@@ -36,7 +38,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --md-primary: #bcc2ff;
     --md-on-primary: #0d1a6b;
     --md-primary-container: #2a3a8f;
@@ -64,6 +66,43 @@
     --md-inverse-surface: #e4e1e9;
     --md-inverse-on-surface: #303036;
   }
+}
+
+:root[data-theme='dark'] {
+  --md-primary: #bcc2ff;
+  --md-on-primary: #0d1a6b;
+  --md-primary-container: #2a3a8f;
+  --md-on-primary-container: #dee0ff;
+  --md-secondary: #c4c5dd;
+  --md-on-secondary: #2d2f42;
+  --md-secondary-container: #434559;
+  --md-on-secondary-container: #e0e0f9;
+  --md-background: #131318;
+  --md-on-background: #e4e1e9;
+  --md-surface: #131318;
+  --md-surface-dim: #131318;
+  --md-surface-variant: #46464f;
+  --md-on-surface: #e4e1e9;
+  --md-on-surface-variant: #c7c5d0;
+  --md-outline: #918f9a;
+  --md-outline-variant: #46464f;
+  --md-error: #ffb4ab;
+  --md-on-error: #690005;
+  --md-surface-container-lowest: #0e0e13;
+  --md-surface-container-low: #1b1b21;
+  --md-surface-container: #1f1f25;
+  --md-surface-container-high: #2a2930;
+  --md-surface-container-highest: #35343b;
+  --md-inverse-surface: #e4e1e9;
+  --md-inverse-on-surface: #303036;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
 }
 
 @theme inline {
