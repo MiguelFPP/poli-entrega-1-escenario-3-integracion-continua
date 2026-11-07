@@ -15,13 +15,16 @@
     "test": "NODE_OPTIONS=--experimental-vm-modules jest --config ./jest.config.js",
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --config ./jest.config.js --watch",
     "test:e2e": "NODE_OPTIONS=--experimental-vm-modules jest --config ./jest-e2e.config.js",
-    "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
+    "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\" \"prisma/**/*.ts\" \"prisma.config.ts\"",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "prisma": "prisma",
     "prisma:generate": "prisma generate",
     "migrate": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
-    "seed": "node prisma/seed.mjs"
+    "migrate:test": "prisma migrate deploy",
+    "db:reset": "prisma migrate reset --force && tsx prisma/seed.ts",
+    "seed": "tsx prisma/seed.ts",
+    "seed:demo": "tsx prisma/seed-demo.ts"
   },
   "dependencies": {
     "@nestjs/common": "12.4.0",
@@ -31,6 +34,7 @@
     "@nestjs/swagger": "12.1.1",
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
+    "bcryptjs": "3.0.3",
     "class-transformer": "0.5.1",
     "class-validator": "0.14.2",
     "cookie-parser": "1.4.7",
@@ -40,6 +44,7 @@
     "rxjs": "7.8.2"
   },
   "devDependencies": {
+    "@faker-js/faker": "10.6.0",
     "@nestjs/cli": "12.0.12",
     "@nestjs/schematics": "12.0.13",
     "@nestjs/testing": "12.4.0",
@@ -56,6 +61,7 @@
     "prisma": "7.10.1",
     "supertest": "7.1.4",
     "ts-jest": "29.4.15",
+    "tsx": "4.23.15",
     "typescript": "5.9.3",
     "typescript-eslint": "8.72.1"
   }

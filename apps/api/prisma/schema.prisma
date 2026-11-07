@@ -1,4 +1,6 @@
-// Fase 0: sin modelos. La Fase 1 agrega las entidades del dominio.
+// Fase 1: modelo de datos completo del POS.
+// snake_case en @@map; claves primarias UUID; dinero en Decimal(14, 2).
+
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -6,4 +8,211 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  CASHIER
+}
+
+enum PriceField {
+  COST
+  SALE
+}
+
+enum StockMovementType {
+  ENTRY
+  SALE
+  ADJUSTMENT
+  VOID
+}
+
+enum SaleStatus {
+  COMPLETED
+  VOIDED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(ADMIN)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  refreshTokens  RefreshToken[]
+  priceChanges   PriceHistory[]  @relation("PriceChangedBy")
+  stockMovements StockMovement[]
+  sales          Sale[]          @relation("SaleUser")
+  voidedSales    Sale[]          @relation("SaleVoidedBy")
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  userAgent String?
+  ip        String?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Category {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  description String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id          String    @id @default(uuid()) @db.Uuid
+  sku         String    @unique
+  barcode     String?   @unique
+  name        String
+  description String?
+  categoryId  String    @db.Uuid
+  costPrice   Decimal   @db.Decimal(14, 2)
+  salePrice   Decimal   @db.Decimal(14, 2)
+  stock       Int       @default(0)
+  minStock    Int       @default(0)
+  unit        String    @default("unidad")
+  imageUrl    String?
+  active      Boolean   @default(true)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  category       Category        @relation(fields: [categoryId], references: [id])
+  priceHistory   PriceHistory[]
+  stockMovements StockMovement[]
+  saleItems      SaleItem[]
+
+  @@index([categoryId])
+  @@index([name])
+  @@index([active])
+  @@map("products")
+}
+
+model PriceHistory {
+  id          String     @id @default(uuid()) @db.Uuid
+  productId   String     @db.Uuid
+  field       PriceField
+  oldValue    Decimal    @db.Decimal(14, 2)
+  newValue    Decimal    @db.Decimal(14, 2)
+  changedById String?    @db.Uuid
+  createdAt   DateTime   @default(now())
+
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  changedBy User?   @relation("PriceChangedBy", fields: [changedById], references: [id])
+
+  @@index([productId, createdAt])
+  @@map("price_history")
+}
+
+model StockMovement {
+  id            String            @id @default(uuid()) @db.Uuid
+  productId     String            @db.Uuid
+  type          StockMovementType
+  quantity      Int
+  previousStock Int
+  newStock      Int
+  unitCost      Decimal           @db.Decimal(14, 2)
+  reason        String?
+  saleId        String?           @db.Uuid
+  userId        String?           @db.Uuid
+  createdAt     DateTime          @default(now())
+
+  product Product @relation(fields: [productId], references: [id])
+  sale    Sale?   @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  user    User?   @relation(fields: [userId], references: [id])
+
+  @@index([productId, createdAt])
+  @@index([saleId])
+  @@map("stock_movements")
+}
+
+model Sale {
+  id             String     @id @default(uuid()) @db.Uuid
+  number         BigInt     @unique
+  status         SaleStatus @default(COMPLETED)
+  userId         String     @db.Uuid
+  subtotal       Decimal    @db.Decimal(14, 2)
+  discountAmount Decimal    @db.Decimal(14, 2)
+  taxAmount      Decimal    @db.Decimal(14, 2)
+  total          Decimal    @db.Decimal(14, 2)
+  costTotal      Decimal    @db.Decimal(14, 2)
+  profit         Decimal    @db.Decimal(14, 2)
+  createdAt      DateTime   @default(now())
+  voidedAt       DateTime?
+  voidedById     String?    @db.Uuid
+  voidReason     String?
+
+  user           User            @relation("SaleUser", fields: [userId], references: [id])
+  voidedBy       User?           @relation("SaleVoidedBy", fields: [voidedById], references: [id])
+  items          SaleItem[]
+  payments       Payment[]
+  stockMovements StockMovement[]
+
+  @@index([createdAt])
+  @@index([status])
+  @@index([userId])
+  @@map("sales")
+}
+
+model SaleItem {
+  id           String  @id @default(uuid()) @db.Uuid
+  saleId       String  @db.Uuid
+  productId    String  @db.Uuid
+  productName  String
+  sku          String
+  quantity     Int
+  unitPrice    Decimal @db.Decimal(14, 2)
+  unitCost     Decimal @db.Decimal(14, 2)
+  lineSubtotal Decimal @db.Decimal(14, 2)
+  lineDiscount Decimal @db.Decimal(14, 2)
+  lineTax      Decimal @db.Decimal(14, 2)
+  lineTotal    Decimal @db.Decimal(14, 2)
+  lineProfit   Decimal @db.Decimal(14, 2)
+
+  sale    Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([saleId])
+  @@index([productId])
+  @@map("sale_items")
+}
+
+model Payment {
+  id           String        @id @default(uuid()) @db.Uuid
+  saleId       String        @unique @db.Uuid
+  method       PaymentMethod
+  amount       Decimal       @db.Decimal(14, 2)
+  cashReceived Decimal?      @db.Decimal(14, 2)
+  changeGiven  Decimal?      @db.Decimal(14, 2)
+  createdAt    DateTime      @default(now())
+
+  sale Sale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
 }
