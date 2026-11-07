@@ -6,11 +6,13 @@ El proyecto se construyó por fases (00–11) y esta entrega corresponde al **ci
 
 > **Estado:** v1.0.0 — cierre técnico. Suite completa en verde: **488/488** pruebas (220 unitarias de API, 95 e2e de API y 173 de la web).
 
+> **Acceso de demostración:** usuario `admin@pos.local` · contraseña `Admin123!` · rol `ADMIN`.
+
 > **Note:** la versión v1.0.0 es la del producto y de la API (Swagger); los `package.json` del monorepo siguen en `0.1.0`.
 
 ## Estado del proyecto
 
-Las fases 00–11 están cerradas y etiquetadas en `main` (tags `fase-00` … `fase-11`). La Fase 12 (cierre técnico) se desarrolla en la rama `feature/fase-12-cierre`.
+Las fases 00–12 están cerradas y etiquetadas en `main` (tags `fase-00` … `fase-12`). La Fase 13 (publicación en GitHub y entrega) queda pendiente de confirmar owner y visibilidad del repositorio.
 
 - [x] Fase 00 — bootstrap del monorepo, Docker y endpoint de salud (`fase-00`)
 - [x] Fase 01 — modelo de datos, migraciones, factories y seeds (`fase-01`)
@@ -24,7 +26,7 @@ Las fases 00–11 están cerradas y etiquetadas en `main` (tags `fase-00` … `f
 - [x] Fase 09 — frontend de POS y ventas (`fase-09`)
 - [x] Fase 10 — KPIs y reportes (`fase-10`)
 - [x] Fase 11 — frontend del dashboard (`fase-11`)
-- [ ] Fase 12 — cierre técnico: filtro global de errores, índices de rendimiento, cobertura con umbrales, CI, smoke y documentación (`feature/fase-12-cierre`)
+- [x] Fase 12 — cierre técnico: filtro global de errores, índices de rendimiento, cobertura con umbrales, CI, smoke y documentación (`fase-12`)
 
 ## Índice
 
