@@ -30,3 +30,6 @@ coverage/
 *.log
 npm-debug.log*
 pnpm-debug.log*
+
+# Grafo local de codebase-memory
+.codebase-memory/

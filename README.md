@@ -1,11 +1,14 @@
 # POS — Sistema de punto de venta
 
-Monorepo del sistema POS. **Estado actual: Fase 1 (modelo de datos)**. La Fase 0
-dejó la infraestructura (contenedores de web, API y base de datos, endpoint de
-salud y Swagger). La Fase 1 agrega el modelo de datos completo de Prisma, las
-migraciones (incluida la secuencia `sale_number_seq` y los _check constraints_),
-las _factories_ con Faker y los seeds base y demo. Todavía no hay endpoints de
-negocio ni autenticación.
+Monorepo del sistema POS. **Estado actual: Fase 2 (autenticación y usuarios)**.
+La Fase 0 dejó la infraestructura (contenedores de web, API y base de datos,
+endpoint de salud y Swagger) y la Fase 1 el modelo de datos completo de Prisma,
+las migraciones, las _factories_ con Faker y los seeds base y demo.
+
+La Fase 2 agrega autenticación con JWT de acceso + refresh token rotativo en
+cookies `httpOnly`, guards globales (auth, roles, `Origin` y rate limit) y el
+CRUD de usuarios restringido a `ADMIN`, todo documentado en Swagger. La pantalla
+de login llega en la Fase 7.
 
 ## Stack
 
@@ -43,9 +46,14 @@ No se necesita Node.js ni pnpm en el host: todo se ejecuta dentro de contenedore
 │   │   │   ├── seed.ts      # seed base idempotente
 │   │   │   └── seed-demo.ts # datos de demostración
 │   │   ├── src/
-│   │   │   ├── config/ # validación de variables de entorno
-│   │   │   ├── health/ # GET /api/v1/health
-│   │   │   └── prisma/ # PrismaService con adaptador pg
+│   │   │   ├── app.setup.ts  # prefijo, pipes, helmet, CORS y cookies (main + e2e)
+│   │   │   ├── common/       # decoradores, guards globales, rate limit y helpers
+│   │   │   ├── config/       # validación de env y orígenes permitidos
+│   │   │   ├── health/       # GET /api/v1/health (público)
+│   │   │   ├── modules/
+│   │   │   │   ├── auth/     # login, refresh, logout, me y tokens
+│   │   │   │   └── users/    # CRUD de usuarios (solo ADMIN)
+│   │   │   └── prisma/       # PrismaService con adaptador pg
 │   │   └── test/       # unitarios y e2e con Supertest
 │   └── web/            # Next.js 16 (App Router) + Tailwind 4
 │       └── src/
@@ -78,7 +86,7 @@ Servicios resultantes:
 No se usan bind mounts: el código vive dentro de las imágenes. Después de cambiar
 código hay que reconstruir (`make build` o `docker compose up -d --build`).
 
-## Arquitectura de la fase 0
+## Arquitectura
 
 ```mermaid
 flowchart LR
@@ -92,7 +100,8 @@ flowchart LR
   `API_INTERNAL_URL` (por defecto `http://api:3001`), por lo que el navegador
   siempre habla con un único origen.
 - **api**: prefijo global `/api/v1`, `ValidationPipe` global, `helmet`,
-  `cookie-parser`, Swagger en `/api/docs`.
+  `cookie-parser`, CORS con credenciales, guards globales (auth, roles, `Origin`,
+  rate limit) y Swagger en `/api/docs`.
 - **db**: volumen `pgdata`; `infra/postgres/init.sql` crea la base `pos_test` que
   consumen las pruebas e2e.
 
@@ -120,7 +129,131 @@ Cuando PostgreSQL no responde:
 ```
 
 El contenedor `api` usa este endpoint como healthcheck; `web` arranca solo cuando
-la API está saludable.
+la API está saludable. Está marcado con `@Public()`: es la única ruta, junto a
+`login` y `refresh`, que no exige sesión.
+
+## Autenticación y seguridad (Fase 2)
+
+### Endpoints
+
+| Método | Ruta                           | Acceso  | Descripción                                                          |
+| ------ | ------------------------------ | ------- | -------------------------------------------------------------------- |
+| POST   | `/api/v1/auth/login`           | Público | Valida credenciales y emite las cookies de sesión (5 req/min por IP) |
+| POST   | `/api/v1/auth/refresh`         | Cookie  | Rota el refresh token y emite cookies nuevas                         |
+| POST   | `/api/v1/auth/logout`          | Sesión  | Revoca el refresh actual y limpia las cookies                        |
+| GET    | `/api/v1/auth/me`              | Sesión  | Usuario autenticado sin `passwordHash`                               |
+| GET    | `/api/v1/users`                | ADMIN   | Listado paginado (`page`, `pageSize`, `search`, `active`)            |
+| POST   | `/api/v1/users`                | ADMIN   | Crea un usuario `ADMIN`                                              |
+| PATCH  | `/api/v1/users/:id`            | ADMIN   | Actualiza `name`, `email` y/o `active`                               |
+| PATCH  | `/api/v1/users/:id/password`   | ADMIN   | Cambia la contraseña y revoca las sesiones del usuario               |
+| PATCH  | `/api/v1/users/:id/deactivate` | ADMIN   | Desactiva la cuenta (no permite autodesactivarse)                    |
+| GET    | `/api/v1/health`               | Público | Estado del servicio y de PostgreSQL                                  |
+
+Un usuario autenticado sin rol `ADMIN` recibe `403` en `/users`; sin sesión,
+`401`. No se borran usuarios: solo se desactivan (`active: false`).
+
+### Cookies de sesión
+
+| Cookie          | Contenido                                               | `Path`         | `Max-Age` | Atributos                                          |
+| --------------- | ------------------------------------------------------- | -------------- | --------- | -------------------------------------------------- |
+| `access_token`  | JWT HS256 (`sub`, `email`, `role`), expira a los 15 min | `/`            | 7 días    | `HttpOnly`, `SameSite=Lax`, `Secure` en producción |
+| `refresh_token` | Token opaco de 64 bytes aleatorios                      | `/api/v1/auth` | 7 días    | `HttpOnly`, `SameSite=Lax`, `Secure` en producción |
+
+- El **body de login/refresh nunca incluye tokens**: solo el usuario y los
+  segundos de vigencia (`accessTokenExpiresIn` = 900, `refreshTokenExpiresIn` =
+  604800). El frontend no puede leerlos desde JavaScript.
+- En la base solo se guarda el **hash SHA-256** del refresh (con
+  `JWT_REFRESH_SECRET` como _pepper_), junto a `userAgent`, `ip`, `expiresAt` y
+  `revokedAt`.
+- El access token caduca a los 15 minutos aunque la cookie dure 7 días: al
+  recibir `401` hay que llamar a `/auth/refresh` y reintentar.
+
+### Flujo de sesión
+
+```mermaid
+sequenceDiagram
+  participant B as Navegador
+  participant A as API
+  B->>A: POST /auth/login {email, password}
+  A-->>B: Set-Cookie access_token + refresh_token
+  B->>A: GET /auth/me (cookies)
+  A-->>B: 200 usuario
+  Note over B,A: pasan 15 min (el access caduca)
+  B->>A: POST /auth/refresh (cookie refresh_token)
+  A-->>B: 200 + cookies nuevas (refresh rotado)
+  B->>A: POST /auth/logout (cookies)
+  A-->>B: 204 + cookies expiradas
+```
+
+**Rotación y detección de reuso.** Cada `refresh` revoca el token recibido y
+crea uno nuevo. Si se presenta un refresh **ya revocado** se asume robo o
+_replay_: se revocan **todas** las sesiones del usuario y se responde `401`.
+
+### Ejemplos con curl
+
+```bash
+# 1. Login: guarda las cookies httpOnly en el cookie jar
+curl -i -c cookies.txt \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin@pos.local","password":"Admin123!"}' \
+  http://localhost:3001/api/v1/auth/login
+
+# 2. Perfil de la sesión (cookie o Bearer)
+curl -b cookies.txt http://localhost:3001/api/v1/auth/me
+curl -H "Authorization: Bearer $ACCESS_TOKEN" http://localhost:3001/api/v1/auth/me
+
+# 3. Rotación del refresh (reemplaza las cookies)
+curl -i -b cookies.txt -c cookies.txt -X POST \
+  http://localhost:3001/api/v1/auth/refresh
+
+# 4. Logout (revoca el refresh y expira las cookies)
+curl -i -b cookies.txt -c cookies.txt -X POST \
+  http://localhost:3001/api/v1/auth/logout
+
+# 5. Usuarios (requiere rol ADMIN)
+curl -b cookies.txt 'http://localhost:3001/api/v1/users?page=1&pageSize=20&search=admin'
+curl -b cookies.txt -H 'Content-Type: application/json' \
+  -d '{"name":"Cajera Turno Mañana","email":"cajera@pos.local","password":"Cajera2026!"}' \
+  http://localhost:3001/api/v1/users
+curl -b cookies.txt -X PATCH http://localhost:3001/api/v1/users/<uuid>/deactivate
+```
+
+### Reglas de seguridad implementadas
+
+- **Guards globales** (`APP_GUARD`), en este orden: rate limit → `Origin` →
+  `JwtAuthGuard` → `RolesGuard`. Todo es privado salvo lo marcado con
+  `@Public()`; los endpoints de `/users` declaran `@Roles(Role.ADMIN)`.
+- **Access token**: se lee de la cookie `access_token` y, si no existe, de
+  `Authorization: Bearer`. Firma HMAC-SHA256 sobre `node:crypto` con
+  comparación en tiempo constante y validación de `exp` y `alg`.
+- **Rate limit**: 600 peticiones por minuto por IP y ruta como límite global;
+  `POST /auth/login` baja a **5 por minuto** (`@Throttle`) y responde `429` con
+  `Retry-After` y `X-RateLimit-*`.
+- **CSRF por `Origin`**: las mutaciones (`POST`, `PATCH`, `PUT`, `DELETE`) con
+  cabecera `Origin` distinta de `WEB_ORIGIN` responden `403`. Sin `Origin`
+  (curl, tests, server-to-server) la petición pasa. Ojo: Swagger UI se sirve en
+  `http://localhost:3001`, así que para probar mutaciones desde ahí hay que
+  añadir ese origen (`WEB_ORIGIN=http://localhost:3000,http://localhost:3001`).
+- **CORS** con `credentials: true` y `origin: WEB_ORIGIN` (admite lista separada
+  por comas) para que el proxy same-origin de Next.js pueda reenviar cookies.
+- **Contraseñas**: bcrypt con coste 12; mínimo 8 caracteres con mayúscula,
+  minúscula y número. Un email inexistente consume un hash señuelo para no
+  filtrar qué cuentas existen.
+- **Desactivar o cambiar contraseña revoca** los refresh tokens del usuario.
+- Al desactivar un usuario, su access token sigue siendo válido hasta 15 min,
+  pero `/auth/me` y el refresh lo rechazan porque se revalida contra la base.
+
+### Variables de entorno nuevas
+
+| Variable             | Obligatoria | Descripción                                                |
+| -------------------- | ----------- | ---------------------------------------------------------- |
+| `JWT_ACCESS_SECRET`  | Sí (32+)    | Firma del access token                                     |
+| `JWT_REFRESH_SECRET` | Sí (32+)    | Pepper del hash del refresh token                          |
+| `WEB_ORIGIN`         | No          | Origen(es) permitidos; por defecto `http://localhost:3000` |
+
+`docker-compose.yml` y `.env.example` traen valores **solo de desarrollo**
+(≥32 caracteres). En producción genera secretos propios, por ejemplo con
+`openssl rand -base64 48`.
 
 ## Modelo de datos (Fase 1)
 
@@ -290,6 +423,48 @@ make typecheck-api
 make lint-api
 ```
 
+## Pruebas de la fase 2
+
+```bash
+# 1. Imagen con el código nuevo (los tests corren dentro del contenedor)
+docker compose build api
+
+# 2. Base de datos arriba
+docker compose up -d db
+
+# 3. Unitarios de auth (sin base de datos)
+make api-test FILE=src/modules/auth/auth.service.spec.ts
+make api-test FILE=src/modules/auth/token.service.spec.ts
+
+# 4. e2e de autenticación y usuarios (aplican migraciones sobre pos_test)
+make api-e2e FILE=test/auth.e2e-spec.ts
+make api-e2e FILE=test/users.e2e-spec.ts
+
+# 5. Calidad
+make lint-api
+make typecheck-api
+
+# 6. Humo manual con curl (cookie jar)
+docker compose up -d api
+curl -i -c cookies.txt -H 'Content-Type: application/json' \
+  -d '{"email":"admin@pos.local","password":"Admin123!"}' \
+  http://localhost:3001/api/v1/auth/login
+curl -b cookies.txt http://localhost:3001/api/v1/auth/me
+curl -i -b cookies.txt -c cookies.txt -X POST http://localhost:3001/api/v1/auth/refresh
+curl -i -b cookies.txt -c cookies.txt -X POST http://localhost:3001/api/v1/auth/logout
+```
+
+Los e2e cubren: login 200 con cookies `httpOnly` y sin tokens en el body, login
+`401` (clave errónea y usuario inactivo), `me` con y sin cookie, `Bearer`,
+rotación del refresh con rechazo del token viejo, detección de reuso, logout con
+revocación, `429` al sexto intento y `403` con `Origin` no permitido; además,
+`/users` sin sesión (`401`), con rol `CASHIER` (`403`), listado paginado con
+búsqueda y filtro, alta, email duplicado (`409`), validación (`400`), cambio de
+contraseña, desactivación, `404` y autodesactivación bloqueada.
+
+Cada archivo e2e limpia la base con `resetDatabase` y reinicia el rate limit,
+así que el `429` no vuelve flaky a los demás casos.
+
 ## Credenciales
 
 El seed (`pnpm seed` y `pnpm seed:demo`) crea el administrador del MVP:
@@ -299,8 +474,9 @@ El seed (`pnpm seed` y `pnpm seed:demo`) crea el administrador del MVP:
 | `admin@pos.local` | `Admin123!` | `ADMIN` |
 
 La contraseña se guarda con bcrypt (coste 12) y se restablece en cada corrida
-del seed. `JWT_ACCESS_SECRET` y `JWT_REFRESH_SECRET` se validan como opcionales
-en `src/config/env.validation.ts` y se usarán en la fase de autenticación.
+del seed. `JWT_ACCESS_SECRET` y `JWT_REFRESH_SECRET` son **obligatorias** y
+deben tener al menos 32 caracteres (`src/config/env.validation.ts`); el arranque
+falla si faltan o son cortas.
 
 ## Notas técnicas
 
@@ -322,6 +498,17 @@ en `src/config/env.validation.ts` y se usarán en la fase de autenticación.
   cualquier cambio exige `docker compose build api`.
 - **Jest en ESM** requiere `NODE_OPTIONS=--experimental-vm-modules`; los scripts
   `test` y `test:e2e` ya lo incluyen.
+- **JWT sin dependencias**: `JwtService` firma y verifica HS256 con
+  `node:crypto` (HMAC + comparación en tiempo constante), así que `jsonwebtoken`,
+  `@nestjs/jwt` y `@nestjs/throttler` no se agregaron al proyecto. El rate limit
+  vive en `src/common/rate-limit` (memoria por proceso) y expone `reset()` para
+  los tests; en varias instancias habría que compartirlo (Redis).
+- **Configuración compartida**: `src/app.setup.ts` aplica prefijo global,
+  `ValidationPipe`, `helmet`, `cookie-parser` y CORS tanto en `main.ts` como en
+  los e2e, de modo que las pruebas usan la misma pila que producción.
+- **`enableImplicitConversion` y booleanos**: `class-transformer` convierte
+  `'false'` a `true` al inferir `Boolean`, por eso `active` en el query de
+  `/users` se valida como `'true' | 'false'` y se traduce en el servicio.
 - **Tailwind 4** define los tokens Material You con `@theme inline` sobre
   variables CSS, por lo que el modo oscuro funciona con `prefers-color-scheme`
   sin prefijos `dark:`.

@@ -6,10 +6,12 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
+import { Public } from '../common/decorators/public.decorator.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { HealthResponseDto } from './health-response.dto.js';
 
 @ApiTags('Health')
+@Public()
 @Controller('health')
 export class HealthController {
   private readonly logger = new Logger(HealthController.name);
@@ -23,8 +25,8 @@ export class HealthController {
       'Verifica que la API esté en ejecución y que pueda consultar PostgreSQL',
       'mediante `SELECT 1`.',
       '',
-      'No requiere autenticación: lo consume Docker Compose, el balanceador y',
-      'las herramientas de monitoreo.',
+      'Público (`@Public()`): lo consume Docker Compose, el balanceador y las',
+      'herramientas de monitoreo, por lo que no requiere cookies ni Bearer.',
       '',
       'Devuelve **200** cuando la base de datos responde y **503** cuando no.',
     ].join('\n'),

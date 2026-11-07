@@ -1,14 +1,19 @@
-import { plainToInstance, Type } from 'class-transformer';
+import { plainToInstance, Transform, Type } from 'class-transformer';
 import {
   IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
+  Matches,
   Max,
   Min,
+  MinLength,
   validateSync,
   type ValidationError,
 } from 'class-validator';
+import { DEFAULT_WEB_ORIGIN } from './web-origin.js';
+
+const MIN_SECRET_LENGTH = 32;
 
 /** Variables de entorno requeridas y opcionales de la API. */
 export class EnvironmentVariables {
@@ -22,14 +27,31 @@ export class EnvironmentVariables {
   @Max(65535, { message: 'PORT debe estar entre 1 y 65535' })
   PORT: number = 3001;
 
-  // Se validan ahora y se consumirán en la fase de autenticación.
-  @IsOptional()
   @IsString({ message: 'JWT_ACCESS_SECRET debe ser texto' })
-  JWT_ACCESS_SECRET?: string;
+  @MinLength(MIN_SECRET_LENGTH, {
+    message: `JWT_ACCESS_SECRET debe tener al menos ${MIN_SECRET_LENGTH} caracteres`,
+  })
+  JWT_ACCESS_SECRET!: string;
 
-  @IsOptional()
   @IsString({ message: 'JWT_REFRESH_SECRET debe ser texto' })
-  JWT_REFRESH_SECRET?: string;
+  @MinLength(MIN_SECRET_LENGTH, {
+    message: `JWT_REFRESH_SECRET debe tener al menos ${MIN_SECRET_LENGTH} caracteres`,
+  })
+  JWT_REFRESH_SECRET!: string;
+
+  /** Origen del frontend; admite varios separados por comas. */
+  @Transform(({ value }): unknown =>
+    typeof value === 'string' && value.trim().length > 0
+      ? value.trim()
+      : undefined,
+  )
+  @IsOptional()
+  @IsString({ message: 'WEB_ORIGIN debe ser texto' })
+  @Matches(/^https?:\/\/[^\s,]+(?:\s*,\s*https?:\/\/[^\s,]+)*$/, {
+    message:
+      'WEB_ORIGIN debe ser una lista de URLs http(s) separadas por comas',
+  })
+  WEB_ORIGIN: string = DEFAULT_WEB_ORIGIN;
 }
 
 export type Env = EnvironmentVariables;

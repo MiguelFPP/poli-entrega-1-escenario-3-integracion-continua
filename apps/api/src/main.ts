@@ -1,13 +1,11 @@
 import 'reflect-metadata';
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import cookieParser from 'cookie-parser';
-import helmet from 'helmet';
 import { AppModule } from './app.module.js';
+import { configureApp, GLOBAL_PREFIX } from './app.setup.js';
 
-const GLOBAL_PREFIX = 'api/v1';
 const SWAGGER_PATH = 'api/docs';
 const DEFAULT_PORT = 3001;
 
@@ -16,25 +14,7 @@ async function bootstrap(): Promise<void> {
   const config = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
 
-  app.setGlobalPrefix(GLOBAL_PREFIX);
-
-  // CSP deshabilitada porque Swagger UI usa estilos y scripts inline.
-  app.use(
-    helmet({
-      contentSecurityPolicy: false,
-      crossOriginEmbedderPolicy: false,
-    }),
-  );
-  app.use(cookieParser());
-
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-      transformOptions: { enableImplicitConversion: true },
-    }),
-  );
+  configureApp(app);
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('POS API')
@@ -42,16 +22,59 @@ async function bootstrap(): Promise<void> {
       [
         'API del sistema de punto de venta (POS).',
         '',
-        'Esta documentación cubre la Fase 0 (bootstrap): únicamente expone el',
-        'endpoint de salud que verifica el servicio y su conexión con PostgreSQL.',
-        'Los módulos de autenticación, productos, inventario, ventas y KPIs se',
-        'agregarán en fases posteriores.',
+        '**Estado: Fase 2 — autenticación y usuarios.**',
+        '',
+        'La sesión se mantiene con **cookies `httpOnly`**:',
+        '',
+        '- `access_token`: JWT HS256 de 15 minutos (cookie de 7 días, `Path=/`).',
+        '- `refresh_token`: token opaco de 7 días (cookie con `Path=/api/v1/auth`).',
+        '',
+        'Los tokens **nunca** viajan en el body de la respuesta. Por eso, para',
+        'probar endpoints protegidos desde esta documentación hay que iniciar',
+        'sesión con `POST /auth/login` en el mismo navegador (o usar',
+        '`Authorization: Bearer <access token>` con el botón **Authorize**).',
+        '',
+        'Reglas de acceso:',
+        '',
+        '- Todo requiere autenticación salvo `Health`, `POST /auth/login` y',
+        '  `POST /auth/refresh`.',
+        '- `/users` exige rol `ADMIN`.',
+        '- `POST /auth/login` acepta 5 intentos por minuto e IP (luego `429`).',
+        '- Las mutaciones con cabecera `Origin` distinta de `WEB_ORIGIN` responden',
+        '  `403`. Si vas a probar aquí, en `http://localhost:3001`, agrega ese',
+        '  origen a `WEB_ORIGIN` (por ejemplo',
+        '  `http://localhost:3000,http://localhost:3001`) o usa curl.',
         '',
         `Todas las rutas usan el prefijo global \`/${GLOBAL_PREFIX}\`.`,
       ].join('\n'),
     )
-    .setVersion('0.1.0')
+    .setVersion('0.2.0')
     .addServer('/', 'Servidor actual')
+    .addCookieAuth(
+      'access_token',
+      {
+        type: 'apiKey',
+        in: 'cookie',
+        description:
+          'JWT de acceso emitido por `POST /auth/login` y renovado por `POST /auth/refresh`.',
+      },
+      'access_token',
+    )
+    .addCookieAuth(
+      'refresh_token',
+      {
+        type: 'apiKey',
+        in: 'cookie',
+        description:
+          'Token opaco de refresco (7 días), restringido a `/api/v1/auth`.',
+      },
+      'refresh_token',
+    )
+    .addTag(
+      'Auth',
+      'Inicio de sesión, rotación del refresh token, cierre de sesión y perfil.',
+    )
+    .addTag('Users', 'Administración de usuarios (solo rol `ADMIN`).')
     .addTag(
       'Health',
       'Estado del servicio y de la base de datos (sin autenticación).',
@@ -64,6 +87,7 @@ async function bootstrap(): Promise<void> {
     swaggerOptions: {
       displayRequestDuration: true,
       persistAuthorization: true,
+      withCredentials: true,
     },
     jsonDocumentUrl: `${SWAGGER_PATH}/json`,
   });
