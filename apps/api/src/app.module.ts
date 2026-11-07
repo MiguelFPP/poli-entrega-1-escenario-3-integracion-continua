@@ -9,6 +9,8 @@ import { RateLimitModule } from './common/rate-limit/rate-limit.module.js';
 import { validateEnv } from './config/env.validation.js';
 import { HealthModule } from './health/health.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
+import { CategoriesModule } from './modules/categories/categories.module.js';
+import { ProductsModule } from './modules/products/products.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 
@@ -23,6 +25,8 @@ import { PrismaModule } from './prisma/prisma.module.js';
     RateLimitModule,
     AuthModule,
     UsersModule,
+    CategoriesModule,
+    ProductsModule,
     HealthModule,
   ],
   providers: [

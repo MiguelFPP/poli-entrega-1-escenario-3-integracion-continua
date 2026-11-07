@@ -22,7 +22,7 @@ async function bootstrap(): Promise<void> {
       [
         'API del sistema de punto de venta (POS).',
         '',
-        '**Estado: Fase 2 — autenticación y usuarios.**',
+        '**Estado: Fase 3 — catálogo de categorías y productos.**',
         '',
         'La sesión se mantiene con **cookies `httpOnly`**:',
         '',
@@ -39,6 +39,7 @@ async function bootstrap(): Promise<void> {
         '- Todo requiere autenticación salvo `Health`, `POST /auth/login` y',
         '  `POST /auth/refresh`.',
         '- `/users` exige rol `ADMIN`.',
+        '- `/categories` y `/products` exigen rol `ADMIN`.',
         '- `POST /auth/login` acepta 5 intentos por minuto e IP (luego `429`).',
         '- Las mutaciones con cabecera `Origin` distinta de `WEB_ORIGIN` responden',
         '  `403`. Si vas a probar aquí, en `http://localhost:3001`, agrega ese',
@@ -48,7 +49,7 @@ async function bootstrap(): Promise<void> {
         `Todas las rutas usan el prefijo global \`/${GLOBAL_PREFIX}\`.`,
       ].join('\n'),
     )
-    .setVersion('0.2.0')
+    .setVersion('0.3.0')
     .addServer('/', 'Servidor actual')
     .addCookieAuth(
       'access_token',
@@ -75,6 +76,14 @@ async function bootstrap(): Promise<void> {
       'Inicio de sesión, rotación del refresh token, cierre de sesión y perfil.',
     )
     .addTag('Users', 'Administración de usuarios (solo rol `ADMIN`).')
+    .addTag(
+      'Categories',
+      'Catálogo de categorías con borrado lógico (solo rol `ADMIN`).',
+    )
+    .addTag(
+      'Products',
+      'Catálogo de productos, precios, stock mínimo e historial de cambios (solo rol `ADMIN`).',
+    )
     .addTag(
       'Health',
       'Estado del servicio y de la base de datos (sin autenticación).',
