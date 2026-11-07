@@ -2,7 +2,7 @@
 
 Monorepo de un **punto de venta (POS)** para comercio de barrio: catálogo de productos y categorías, inventario con movimientos, ventas transaccionales, anulación con devolución de stock y tablero de KPIs. Todos los importes están en **pesos colombianos (COP)** con el **IVA del 19 % incluido en el precio de venta** y la operación diaria se lee en la zona **`America/Bogota`**.
 
-El proyecto se construyó por fases (00–11) y esta entrega corresponde al **cierre técnico (Fase 12)**: calidad medida, cobertura con umbrales, filtro global de errores e índices de rendimiento, sobre la versión **v1.0.0** documentada en Swagger.
+El proyecto corresponde al **cierre técnico** del producto: calidad medida, cobertura con umbrales, filtro global de errores e índices de rendimiento, sobre la versión **v1.0.0** documentada en Swagger.
 
 > **Estado:** v1.0.0 — cierre técnico. Suite completa en verde: **488/488** pruebas (220 unitarias de API, 95 e2e de API y 173 de la web).
 
@@ -12,21 +12,14 @@ El proyecto se construyó por fases (00–11) y esta entrega corresponde al **ci
 
 ## Estado del proyecto
 
-Las fases 00–12 están cerradas y etiquetadas en `main` (tags `fase-00` … `fase-12`). La Fase 13 (publicación en GitHub y entrega) queda pendiente de confirmar owner y visibilidad del repositorio.
+Versión **v1.0.0** cerrada en `main` y lista para entrega. Alcance cubierto:
 
-- [x] Fase 00 — bootstrap del monorepo, Docker y endpoint de salud (`fase-00`)
-- [x] Fase 01 — modelo de datos, migraciones, factories y seeds (`fase-01`)
-- [x] Fase 02 — autenticación JWT, usuarios y Swagger (`fase-02`)
-- [x] Fase 03 — catálogo e historial de precios (`fase-03`)
-- [x] Fase 04 — frontend base, Material You y autenticación (`fase-04`)
-- [x] Fase 05 — frontend de catálogo (`fase-05`)
-- [x] Fase 06 — inventario (`fase-06`)
-- [x] Fase 07 — frontend de inventario (`fase-07`)
-- [x] Fase 08 — ventas (`fase-08`)
-- [x] Fase 09 — frontend de POS y ventas (`fase-09`)
-- [x] Fase 10 — KPIs y reportes (`fase-10`)
-- [x] Fase 11 — frontend del dashboard (`fase-11`)
-- [x] Fase 12 — cierre técnico: filtro global de errores, índices de rendimiento, cobertura con umbrales, CI, smoke y documentación (`fase-12`)
+- Monorepo pnpm (`apps/api` + `apps/web`) con Docker Compose y `make` como interfaz de operación.
+- API NestJS con autenticación por cookies, catálogo, inventario, ventas y KPIs, documentada en Swagger.
+- Web Next.js con las pantallas de login, dashboard, productos, categorías, inventario, POS y ventas.
+- 488 pruebas en verde (220 unitarias de API, 95 e2e de API y 173 de la web) con umbrales de cobertura activos.
+- CI en GitHub Actions: lint, typecheck, unitarios, e2e y build.
+- Semilla base y semilla de demostración reproducibles (`faker.seed(2026)`).
 
 ## Índice
 
@@ -270,7 +263,7 @@ make test-reset     # borra el volumen pos-pgdata, reconstruye y levanta todo de
 - Unitarios de la API junto al código (`src/**/*.spec.ts`); e2e en `apps/api/test/*.e2e-spec.ts` contra `pos_test`; web en `src/**/*.test.tsx`.
 - Cada e2e limpia la base con `resetDatabase()` (truncado del negocio + reinicio de la secuencia) y reinicia el rate limit, así que los casos no dependen del orden.
 
-> **Decision:** durante las fases 00–11 solo se ejecutaban los tests de la fase, siempre acotados con `FILE=`; la **suite completa se ejecuta únicamente en el cierre técnico** (Fase 12), que es cuando se registraron los números de esta tabla. Ver [docs/DECISIONES.md](docs/DECISIONES.md).
+> **Decision:** durante el desarrollo los tests se ejecutaban acotados con `FILE=`; la **suite completa** se corre en el cierre técnico, que es cuando se registraron los números de esta tabla. Ver [docs/DECISIONES.md](docs/DECISIONES.md).
 
 ```bash
 make test-all      # cobertura de API (unit + e2e) y web, con los umbrales activos
