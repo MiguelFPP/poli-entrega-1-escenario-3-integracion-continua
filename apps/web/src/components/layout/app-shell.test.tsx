@@ -44,13 +44,14 @@ describe('AppShell', () => {
     for (const label of [
       'Dashboard',
       'Productos',
+      'Categorías',
       'Inventario',
       'POS',
       'Ventas',
     ]) {
       expect(screen.getByRole('link', { name: label })).toBeInTheDocument();
     }
-    expect(NAV_ITEMS).toHaveLength(5);
+    expect(NAV_ITEMS).toHaveLength(6);
   });
 
   it('marca la ruta activa con aria-current', () => {

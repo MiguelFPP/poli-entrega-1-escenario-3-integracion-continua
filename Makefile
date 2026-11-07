@@ -39,13 +39,13 @@ seed-demo: ## Genera datos de demo en la base pos (borra datos previos)
 	$(COMPOSE) run --rm api pnpm seed:demo
 
 api-test: ## Pruebas unitarias de la API (FILE=archivo opcional)
-	$(COMPOSE) run --rm api pnpm test -- $(FILE)
+	$(COMPOSE) run --rm api pnpm test $(FILE)
 
 api-e2e: migrate-test ## Pruebas e2e de la API contra pos_test (FILE=archivo opcional)
-	$(COMPOSE) run --rm -e DATABASE_URL=$(TEST_DB_URL) api pnpm test:e2e -- $(FILE)
+	$(COMPOSE) run --rm -e DATABASE_URL=$(TEST_DB_URL) api pnpm test:e2e $(FILE)
 
 web-test: ## Pruebas de la web (FILE=archivo opcional)
-	$(COMPOSE) run --rm web pnpm test -- $(FILE)
+	$(COMPOSE) run --rm web pnpm test $(FILE)
 
 lint-api: ## ESLint de la API
 	$(COMPOSE) run --rm api pnpm lint

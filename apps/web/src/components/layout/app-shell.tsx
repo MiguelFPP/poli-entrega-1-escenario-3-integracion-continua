@@ -19,6 +19,7 @@ interface NavItem {
 export const NAV_ITEMS: readonly NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: 'dashboard' },
   { label: 'Productos', href: '/productos', icon: 'products' },
+  { label: 'Categorías', href: '/categorias', icon: 'categories' },
   { label: 'Inventario', href: '/inventario', icon: 'inventory' },
   { label: 'POS', href: '/pos', icon: 'point-of-sale' },
   { label: 'Ventas', href: '/ventas', icon: 'sales' },
