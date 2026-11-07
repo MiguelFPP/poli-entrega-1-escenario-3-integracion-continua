@@ -4,7 +4,7 @@
 >
 > **Nota de verificación:** las capturas son archivos reales de este directorio y su contenido coincide con las pantallas servidas por la aplicación en las rutas indicadas. Las descripciones de secciones, controles y columnas se contrastaron contra el árbol de accesibilidad de esas mismas pantallas y contra los componentes de `apps/web/src/components/`.
 >
-> **Documentos relacionados:** [README del proyecto](../../README.md) · [Arquitectura](../ARQUITECTURA.md) · [API](../API.md)
+> **Documentos relacionados:** [README del proyecto](../../README.md) · [Arquitectura](../ARQUITECTURA.md) · [API](../API.md) · [Evidencias del procedimiento](EVIDENCIAS.md)
 
 ## Galería
 
