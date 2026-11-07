@@ -33,3 +33,8 @@ pnpm-debug.log*
 
 # Grafo local de codebase-memory
 .codebase-memory/
+
+# Reglas operativas del agente: solo locales, fuera del tracking de git
+AGENTS.md
+.agents/
+.playwright-mcp
