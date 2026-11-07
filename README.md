@@ -325,6 +325,7 @@ Las fórmulas del dashboard, del costo promedio y del prorrateo están en [docs/
 
 | Documento                                        | Contenido                                                                 |
 | :----------------------------------------------- | :------------------------------------------------------------------------ |
+| [docs/DOCKER.md](docs/DOCKER.md)                  | Configuración de los contenedores, red `pos-net`, healthchecks y evidencia de comunicación entre servicios |
 | [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md)      | Monorepo, capas de la API, orden de guards, arquitectura de la web, flujo de datos y Docker |
 | [docs/MODELO-DATOS.md](docs/MODELO-DATOS.md)      | Entidades, enums, relaciones, índices, restricciones SQL y fórmulas        |
 | [docs/API.md](docs/API.md)                        | Autenticación por cookies, formato de error, paginación, endpoints y ejemplos `curl` |

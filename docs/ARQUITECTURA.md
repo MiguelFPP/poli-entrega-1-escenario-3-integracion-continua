@@ -272,6 +272,8 @@ En la anulación (`POST /api/v1/sales/:id/void`) la misma transacción marca `VO
 | Volumen de datos     | `pos-pgdata` (nombre fijo). `make test-reset` lo elimina (`docker compose down -v`).                       |
 | Imágenes de producción | Stages `prod` en ambos Dockerfile: la API ejecuta `node dist/main.js` y la web sirve la salida `standalone` de Next (`node apps/web/server.js`). |
 
+> **Note:** el detalle de la configuración de Compose, la red, las variables y las pruebas de comunicación entre contenedores está en [DOCKER.md](DOCKER.md).
+
 ## Integración continua
 
 `.github/workflows/ci.yml` corre en `push` y `pull_request`, con `concurrency` que cancela ejecuciones previas de la misma referencia y `NODE_OPTIONS=--experimental-vm-modules` global.
