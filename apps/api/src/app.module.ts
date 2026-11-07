@@ -10,6 +10,7 @@ import { validateEnv } from './config/env.validation.js';
 import { HealthModule } from './health/health.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { CategoriesModule } from './modules/categories/categories.module.js';
+import { DashboardModule } from './modules/dashboard/dashboard.module.js';
 import { InventoryModule } from './modules/inventory/inventory.module.js';
 import { ProductsModule } from './modules/products/products.module.js';
 import { SalesModule } from './modules/sales/sales.module.js';
@@ -31,6 +32,7 @@ import { PrismaModule } from './prisma/prisma.module.js';
     ProductsModule,
     InventoryModule,
     SalesModule,
+    DashboardModule,
     HealthModule,
   ],
   providers: [

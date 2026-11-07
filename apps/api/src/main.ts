@@ -22,7 +22,7 @@ async function bootstrap(): Promise<void> {
       [
         'API del sistema de punto de venta (POS).',
         '',
-        '**Estado: Fase 8 — POS y ventas.**',
+        '**Estado: Fase 10 — KPIs y reportes.**',
         '',
         'La sesión se mantiene con **cookies `httpOnly`**:',
         '',
@@ -42,6 +42,7 @@ async function bootstrap(): Promise<void> {
         '- `/categories` y `/products` exigen rol `ADMIN`.',
         '- `/inventory` exige rol `ADMIN`.',
         '- `/sales` exige rol `ADMIN`.',
+        '- `/dashboard` exige rol `ADMIN`.',
         '- `POST /auth/login` acepta 5 intentos por minuto e IP (luego `429`).',
         '- Las mutaciones con cabecera `Origin` distinta de `WEB_ORIGIN` responden',
         '  `403`. Si vas a probar aquí, en `http://localhost:3001`, agrega ese',
@@ -51,7 +52,7 @@ async function bootstrap(): Promise<void> {
         `Todas las rutas usan el prefijo global \`/${GLOBAL_PREFIX}\`.`,
       ].join('\n'),
     )
-    .setVersion('0.8.0')
+    .setVersion('0.10.0')
     .addServer('/', 'Servidor actual')
     .addCookieAuth(
       'access_token',
@@ -93,6 +94,10 @@ async function bootstrap(): Promise<void> {
     .addTag(
       'Sales',
       'Ventas transaccionales, pagos y anulación (solo rol ADMIN).',
+    )
+    .addTag(
+      'Dashboard',
+      'KPIs de ventas, tendencia, top de productos, métodos de pago y stock bajo (solo rol ADMIN).',
     )
     .addTag(
       'Health',
